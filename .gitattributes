@@ -1,0 +1,4 @@
+﻿* text=auto eol=lf
+*.ini text eol=lf
+*.toml text eol=lf
+*.py text eol=lf
