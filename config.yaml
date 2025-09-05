@@ -1,0 +1,20 @@
+calculation:
+  recency_decay_lambda:
+    defense_policy: 0.015
+    geopolitics: 0.010
+    markets: 0.030
+  corroboration_bonus_kappa: 0.12
+  min_trust_to_quote: 0.75
+  max_quote_words: 25
+  scenario_count: 3
+  interval_band_target: [0.60, 0.85]
+  confidence_labels:
+    low: 0.25
+    medium: 0.55
+    high: 0.75
+writer:
+  enforce_lane_lines: true
+  denotative_first: true
+  neutralize_connotation: true
+  show_tripwires: true
+  max_drivers_public: 5

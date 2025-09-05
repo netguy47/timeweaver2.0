@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.env
+
+# Data and models
+data/raw/
+data/processed/
+models/checkpoints/
+models/logs/
+
+# IDE/editor settings
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node/Frontend caches (if React or Vite is added later)
+node_modules/
+dist/
