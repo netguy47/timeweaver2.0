@@ -1,0 +1,24 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TimeWeaver Predictive Core</title>
+<link rel="stylesheet" href="/static/css/style.css" />
+</head><body class="page">
+<main class="container">
+  <section class="card">
+    <h1>TimeWeaver Predictive Core</h1>
+    <p>Enter an inquiry; get our calculation and a publish-ready report.</p>
+    <input id="inquiry" class="input" placeholder="e.g., What’s the outlook for X by 2030?" />
+    <div style="margin-top:12px; display:flex; gap:8px;">
+      <button class="btn" onclick="runCalc()">Run Calculation</button>
+      <button class="btn" onclick="makeTTS()">Generate TTS</button>
+    </div>
+  </section>
+  <section class="card" style="margin-top:16px"><div id="outcome"></div></section>
+  <section class="card" style="margin-top:16px">
+    <h2>Report</h2>
+    <pre id="report" style="white-space:pre-wrap"></pre>
+    <audio id="audio" controls style="display:none; margin-top:8px;"></audio>
+  </section>
+</main>
+<script src="/static/js/app.js"></script>
+</body></html>
