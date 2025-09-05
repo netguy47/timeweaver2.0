@@ -1,6 +1,5 @@
-# Ensure repo root is on sys.path even if pytest is run from a subfolder/IDE
+﻿# Ensure repo root is on sys.path even if pytest is run from a subfolder/IDE
 import sys, pathlib
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
- 
