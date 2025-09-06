@@ -28,3 +28,5 @@ dist/
 *.env
 *.env.txt
 .env.local
+frontend/static/audio/
+data/
