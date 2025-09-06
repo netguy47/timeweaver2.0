@@ -7,3 +7,5 @@ scikit-learn
 markdown
 pyyaml
 pytest
+pyttsx3
+requests

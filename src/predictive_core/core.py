@@ -1,91 +1,145 @@
 from __future__ import annotations
-from typing import Dict, Any, List
-import random
+from dataclasses import dataclass, asdict
+from typing import List, Dict, Any
+import math, random, time
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+DEBUG_MODE = True
+
+@dataclass
+class Driver:
+    name: str
+    direction: str
+    weight: float
+    rationale: str
+
+@dataclass
+class Scenario:
+    name: str
+    likelihood: float
+    thesis: str
+    tripwires: List[str]
 
 class PredictiveCore:
-    """One-facade predictive engine. Public result = our calculation."""
-    def __init__(self, cfg: dict | None = None):
-        self.cfg = cfg or {}
-
-    def calculate(self, inquiry: str, context: Dict[str, Any] | None = None) -> Dict[str, Any]:
-        corpus = self._ingest(inquiry, context or {})
-        feats  = self._normalize(corpus)
-        local  = self._local_patterns(feats)
-        global_ = self._global_context(feats)
-        scenarios = self._sample_scenarios(feats)
-        fused = self._fuse_predictions(local, global_, scenarios)
-        calibrated = self._calibrate_uncertainty(fused)
-        narrative = self._write_report(inquiry, calibrated, corpus)
-        evidence  = self._build_evidence(corpus, calibrated)
-        return {
-            "probability": calibrated["p"],
-            "band": calibrated["band"],
-            "drivers": calibrated["drivers"],
-            "scenarios": calibrated["scenarios"],
-            "narrative": narrative,
-            "evidence": evidence
+    def calculate(self, inquiry: str) -> Dict[str, Any]:
+        if not inquiry.strip():
+            logger.warning("Calculate called with empty inquiry - returning empty calc")
+            return {}
+        seed = abs(hash(inquiry)) % (2**32)
+        rng = random.Random(seed)
+        base = 0.55 + 0.15 * (rng.random() - 0.5)
+        base = max(0.15, min(0.85, base))
+        spread = 0.07 + 0.04 * rng.random()
+        band_low = max(0.05, base - spread)
+        band_high = min(0.95, base + spread)
+        confidence = self._confidence_from_width(band_low, band_high)
+        drivers = self._build_drivers(inquiry, rng)
+        scenarios = self._build_scenarios(inquiry, rng)
+        signal_strength = self._signal_strength(drivers, band_low, band_high)
+        evidence = [
+            {
+                "title": f"Baseline trend data for '{inquiry}' (synthetic)",
+                "date": "2025-09-01",
+                "type": "other",
+                "trust": 0.65,
+                "summary": "Synthetic baseline constructed for local demo.",
+                "link": "#"
+            }
+        ]
+        calc = {
+            "inquiry": inquiry,
+            "probability": round(base, 3),
+            "band": [round(band_low, 3), round(band_high, 3)],
+            "confidence": confidence,
+            "signal_strength": signal_strength,
+            "drivers": [asdict(d) for d in drivers],
+            "scenarios": [asdict(s) for s in scenarios],
+            "evidence": evidence,
+            "watch": self._watch_items(inquiry, rng),
+            "timestamp": int(time.time())
         }
+        if DEBUG_MODE:
+            logger.info(f"Generated calc for '{inquiry}': {calc}")
+        return calc
 
-    # --- private stubs ---
-    def _ingest(self, inquiry: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        return {"inquiry": inquiry, "signals": [], "context": context}
+    def _confidence_from_width(self, low: float, high: float) -> str:
+        width = high - low
+        if width <= 0.12:
+            return "High"
+        if width <= 0.20:
+            return "Medium"
+        return "Low"
 
-    def _normalize(self, corpus: Dict[str, Any]) -> Dict[str, Any]:
-        return {"features": {"len": len(corpus.get("inquiry",""))}}
-
-    def _local_patterns(self, feats: Dict[str, Any]) -> float:
-        return random.uniform(0.45, 0.60)
-
-    def _global_context(self, feats: Dict[str, Any]) -> float:
-        return random.uniform(0.50, 0.65)
-
-    def _sample_scenarios(self, feats: Dict[str, Any]) -> List[Dict[str, Any]]:
-        base = [0.42, 0.35, 0.23]
-        names = ["Status Quo Drifts","Shock & Realign","Dark Horse Surge"]
-        return [{"name": n, "likelihood": p, "thesis": "Plausible trajectory.", "tripwires": ["Signal A","Signal B"]}
-                for n,p in zip(names, base)]
-
-    def _fuse_predictions(self, local: float, global_: float, scenarios: List[Dict[str, Any]]) -> Dict[str, Any]:
-        p = 0.5*local + 0.5*global_
-        drivers = [
-            {"factor": "Momentum", "direction": "+", "weight": 0.26},
-            {"factor": "Approval", "direction": "+", "weight": 0.21},
-            {"factor": "Macro Sentiment", "direction": "-", "weight": 0.17},
+    def _build_drivers(self, inquiry: str, rng: random.Random) -> List[Driver]:
+        bank = [
+            ("Momentum", "↑", f"Recent directionality of the key metric for '{inquiry}' appears persistent."),
+            ("Policy posture", "↑", f"Official guidance and regulatory tone amplify the trend in '{inquiry}'."),
+            ("Counter-measures", "↓", f"Opposing actions could dampen the base trend related to '{inquiry}'."),
+            ("Macroeconomic sentiment", "↑", f"Broader conditions tend to reinforce this outcome for '{inquiry}'."),
+            ("Execution risk", "↓", f"Delivery complexity or talent bottlenecks could slow progress on '{inquiry}'.")
         ]
-        return {"p": p, "drivers": drivers, "scenarios": scenarios}
+        rng.shuffle(bank)
+        picks = bank[:4]
+        weights = self._normalized([rng.uniform(0.15, 0.35) for _ in picks])
+        drivers = []
+        for (name, dirc, why), w in zip(picks, weights):
+            drivers.append(Driver(name=name, direction=dirc, weight=round(w, 3), rationale=why))
+        drivers.sort(key=lambda d: d.weight, reverse=True)
+        return drivers
 
-    def _calibrate_uncertainty(self, fused: Dict[str, Any]) -> Dict[str, Any]:
-        p = fused["p"]
-        band = (max(0.0, p-0.07), min(1.0, p+0.06))
-        return {"p": p, "band": band, "drivers": fused["drivers"], "scenarios": fused["scenarios"]}
-
-    def _write_report(self, inquiry: str, calc: Dict[str, Any], corpus: Dict[str, Any]) -> str:
-        p = round(calc["p"]*100)
-        lo, hi = calc["band"]
-        lo, hi = round(lo*100), round(hi*100)
-        drivers_md = "\n".join([f"- {d['factor']} ({'↑' if d['direction']=='+' else '↓'}; weight {int(d['weight']*100)}%)" for d in calc["drivers"]])
-        scen_md = "\n".join([f"**{s['name']}** — {int(s['likelihood']*100)}%: {s['thesis']}. Tripwires: {', '.join(s['tripwires'])}"
-                              for s in calc["scenarios"]])
-        return f"""# {inquiry}
-
-**Our calculation:** {p}% likelihood (uncertainty band {lo}–{hi}%).
-
-## Why this matters (context)
-One paragraph framing tied to names, dates, and stakes.
-
-## Top drivers
-{drivers_md}
-
-## Plausible scenarios
-{scen_md}
-
-## What to watch next
-- Concrete indicator one
-- Concrete indicator two
-- Concrete indicator three
-"""
-
-    def _build_evidence(self, corpus: Dict[str, Any], calc: Dict[str, Any]) -> List[Dict[str, Any]]:
-        return [
-            {"title":"Example Source","date":"2025-09-01","type":"news","trust":0.7,"recency_days":4,"summary":"Why this matters.","link":"https://example.com"}
+    def _build_scenarios(self, inquiry: str, rng: random.Random) -> List[Scenario]:
+        s = [
+            Scenario(
+                name="Status Quo Drifts",
+                likelihood=0.0,
+                thesis=f"Inertia dominates '{inquiry}'; incremental change with few shocks.",
+                tripwires=["Muted policy changes", "Stable funding/throughput"]
+            ),
+            Scenario(
+                name="Shock & Realign",
+                likelihood=0.0,
+                thesis=f"External shock forces repricing and re-coordination in '{inquiry}'.",
+                tripwires=["Sharp policy pivot", "Unexpected supply/tech event"]
+            ),
+            Scenario(
+                name="Dark Horse Surge",
+                likelihood=0.0,
+                thesis=f"An underestimated actor/approach accelerates adoption or resistance for '{inquiry}'.",
+                tripwires=["Surprise coalition", "Breakthrough demo with traction"]
+            ),
         ]
+        raw = [rng.uniform(0.2, 1.0) for _ in s]
+        total = sum(raw)
+        probs = [x / total for x in raw]
+        for sc, p in zip(s, probs):
+            sc.likelihood = round(p, 3)
+        s.sort(key=lambda x: x.likelihood, reverse=True)
+        return s
+
+    def _watch_items(self, inquiry: str, rng: random.Random) -> List[str]:
+        pool = [
+            f"Credible first-principles cost breakdowns cross-checked by independents for '{inquiry}'",
+            f"Cadence of on-the-record policy statements shifting stance on '{inquiry}'",
+            f"Evidence of delivery throughput (hi-freq operational metrics) related to '{inquiry}'",
+            f"Adoption signals by pivotal stakeholders in '{inquiry}'",
+            f"Counter-measure maturity and test cadence for '{inquiry}'"
+        ]
+        rng.shuffle(pool)
+        return pool[:3]
+
+    def _normalized(self, xs: List[float]) -> List[float]:
+        s = sum(xs)
+        return [x / s for x in xs] if s > 0 else [1.0 / len(xs) for _ in xs]
+
+    def _signal_strength(self, drivers: List[Driver], low: float, high: float) -> str:
+        width = high - low
+        top = drivers[0].weight if drivers else 0.0
+        score = max(0.0, 1.0 - 2.0 * width) * 0.6 + top * 0.4
+        if score >= 0.66:
+            return "Strong"
+        if score >= 0.4:
+            return "Moderate"
+        return "Soft"
